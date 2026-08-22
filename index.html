@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d9488">
+<link rel="manifest" href="./manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="橱柜对账">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<title>橱柜对账</title>
+<style>
+  :root {
+    --primary: #0d9488;
+    --primary-dark: #0f766e;
+    --primary-light: #ccfbf1;
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --text: #1f2937;
+    --text-2: #6b7280;
+    --border: #e5e7eb;
+    --danger: #dc2626;
+    --money: #b45309;
+    --radius: 14px;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+
+  /* 顶栏 */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--primary);
+    color: #fff;
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.12);
+  }
+  .topbar h1 { font-size: 18px; margin: 0; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar .btn-icon {
+    background: rgba(255,255,255,.18); color: #fff; border: none;
+    width: 34px; height: 34px; border-radius: 10px; font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .topbar .btn-icon:active { background: rgba(255,255,255,.32); }
+
+  .page { padding: 16px; display: none; }
+  .page.active { display: block; }
+
+  /* 汇总大卡片 */
+  .summary {
+    background: linear-gradient(135deg, #0d9488, #14b8a6);
+    color: #fff; border-radius: var(--radius); padding: 20px;
+    margin-bottom: 16px; box-shadow: var(--shadow);
+  }
+  .summary .label { font-size: 13px; opacity: .85; }
+  .summary .total { font-size: 36px; font-weight: 700; letter-spacing: .5px; margin: 4px 0; }
+  .summary .meta { font-size: 13px; opacity: .85; display: flex; gap: 14px; flex-wrap: wrap; }
+
+  /* 卡片 */
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden; }
+  .card-body { padding: 14px 16px; }
+  .card-divider { border-top: 1px solid var(--border); }
+
+  /* 列表项 */
+  .list-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); margin-bottom: 12px; cursor: pointer;
+  }
+  .list-item:active { background: #f9fafb; }
+  .list-item .info { flex: 1; min-width: 0; }
+  .list-item .name { font-weight: 600; font-size: 17px; }
+  .list-item .sub { font-size: 13px; color: var(--text-2); }
+  .list-item .amount { font-size: 18px; font-weight: 700; color: var(--money); white-space: nowrap; }
+
+  /* 房间手风琴 */
+  .room-head {
+    display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer;
+  }
+  .room-head .name { font-weight: 600; font-size: 16px; flex: 1; }
+  .room-head .subtotal { font-weight: 700; color: var(--money); white-space: nowrap; }
+  .room-head .chev { color: var(--text-2); transition: transform .2s; font-size: 14px; }
+  .room.open .chev { transform: rotate(90deg); }
+  .room-body { display: none; padding: 4px 16px 14px; }
+  .room.open .room-body { display: block; }
+
+  /* 柜子行 */
+  .cab {
+    display: flex; align-items: center; gap: 10px; padding: 10px 0;
+    border-top: 1px solid var(--border);
+  }
+  .cab:first-child { border-top: none; }
+  .cab .info { flex: 1; min-width: 0; }
+  .cab .cname { font-weight: 600; }
+  .cab .dims { font-size: 13px; color: var(--text-2); }
+  .cab .money { text-align: right; white-space: nowrap; }
+  .cab .money .amt { font-weight: 700; color: var(--money); }
+  .cab .money .area { font-size: 12px; color: var(--text-2); }
+  .icon-btn {
+    border: none; background: transparent; cursor: pointer; font-size: 16px;
+    color: var(--text-2); padding: 6px; border-radius: 8px;
+  }
+  .icon-btn:active { background: #f3f4f6; }
+  .icon-btn.danger { color: var(--danger); }
+
+  /* 按钮 */
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    font-size: 16px; font-weight: 600; cursor: pointer; background: var(--primary); color: #fff;
+  }
+  .btn:active { background: var(--primary-dark); }
+  .btn.secondary { background: var(--primary-light); color: var(--primary-dark); }
+  .btn.danger { background: #fef2f2; color: var(--danger); }
+  .btn.ghost { background: transparent; color: var(--text-2); font-weight: 500; }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { flex: 1; }
+
+  /* 空状态 */
+  .empty { text-align: center; padding: 60px 20px; color: var(--text-2); }
+  .empty .big { font-size: 48px; margin-bottom: 8px; }
+  .empty p { margin: 0 0 20px; }
+
+  /* 设置行 */
+  .setting-row {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px;
+  }
+  .setting-row .label { flex: 1; font-weight: 500; }
+  .setting-row input {
+    width: 90px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 16px; text-align: right;
+  }
+
+  /* 弹窗 */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 50;
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  .overlay.show { display: flex; }
+  .sheet {
+    background: #fff; width: 100%; max-width: 480px; border-radius: 20px 20px 0 0;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); animation: up .2s ease;
+    max-height: 88vh; overflow-y: auto;
+  }
+  @keyframes up { from { transform: translateY(40px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
+  .sheet h2 { margin: 0 0 16px; font-size: 18px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 14px; color: var(--text-2); margin-bottom: 6px; }
+  .field input {
+    width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 16px;
+    background: #f9fafb;
+  }
+  .field input:focus { outline: none; border-color: var(--primary); background: #fff; }
+  .field .unit { position: relative; }
+  .field .unit input { padding-right: 38px; }
+  .field .unit span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-2); font-size: 14px; }
+  .grid2 { display: flex; gap: 12px; }
+  .grid2 .field { flex: 1; }
+
+  /* 预选词标签 */
+  .presets { max-height: 32vh; overflow-y: auto; margin-bottom: 4px; }
+  .preset-group { margin-bottom: 10px; }
+  .preset-label { display: block; font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    border: 1px solid var(--border); background: #f9fafb; color: var(--text);
+    padding: 7px 12px; border-radius: 18px; font-size: 14px; cursor: pointer; line-height: 1;
+  }
+  .chip:active { background: var(--primary-light); border-color: var(--primary); color: var(--primary-dark); }
+  .preset-hint { font-size: 13px; color: var(--text-2); margin: 0 0 8px; }
+  .extra-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .extra-row .extra-name { flex: 1; font-weight: 500; font-size: 14px; }
+  .extra-row input {
+    width: 64px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; text-align: center;
+  }
+  .extra-add { display: flex; gap: 8px; }
+  .extra-add input { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; }
+  .extra-empty { font-size: 13px; color: var(--text-2); padding: 4px 0; }
+  .section-label { font-size: 12px; font-weight: 700; color: var(--text-2); margin: 18px 0 10px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%);
+    background: rgba(17,24,39,.92); color: #fff; padding: 10px 20px; border-radius: 20px;
+    font-size: 14px; z-index: 100; opacity: 0; pointer-events: none; transition: opacity .25s;
+  }
+  .toast.show { opacity: 1; }
+
+  /* PDF 导出源容器（离屏渲染，供 html2canvas 截图） */
+  #pdf-src {
+    position: fixed; left: -9999px; top: 0;
+    width: 700px; background: #fff; color: #000; padding: 20px;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  #pdf-src h1 { text-align: center; font-size: 24px; margin: 0 0 6px; }
+  #pdf-src .print-meta { text-align: center; font-size: 13px; color: #444; margin-bottom: 18px; }
+  #pdf-src table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  #pdf-src th, #pdf-src td { border: 1px solid #000; padding: 8px 10px; text-align: right; }
+  #pdf-src th { background: #ececec; text-align: center; font-weight: 700; }
+  #pdf-src td:first-child, #pdf-src th:first-child { text-align: left; }
+  #pdf-src tr.room-row td { background: #dcf2ee; font-weight: 700; text-align: left; }
+  #pdf-src tr.total-row td { background: #f2f2f2; font-weight: 700; }
+  #pdf-src .print-footer { margin-top: 16px; text-align: right; font-size: 16px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 首页：工程列表 -->
+  <div class="topbar">
+    <h1>橱柜对账</h1>
+    <button class="btn-icon" data-action="new-project" title="新建工程">＋</button>
+  </div>
+  <div class="page active" id="page-home">
+    <div id="home-list"></div>
+    <div class="empty" id="home-empty" style="display:none">
+      <div class="big">🧮</div>
+      <p>还没有工程，点击右上角「＋」<br>新建第一个对账工程</p>
+      <button class="btn" data-action="new-project">新建工程</button>
+    </div>
+    <button class="btn ghost" data-action="clear-data" style="margin-top:8px">清空全部数据</button>
+  </div>
+
+  <!-- 工程详情页 -->
+  <div class="page" id="page-project">
+    <div class="topbar">
+      <button class="btn-icon" data-action="back-home">‹</button>
+      <h1 id="proj-title">工程</h1>
+      <button class="btn-icon" data-action="edit-project" title="编辑">✎</button>
+    </div>
+    <div class="summary">
+      <div class="label">工程总金额</div>
+      <div class="total" id="proj-total">¥0</div>
+      <div class="meta" id="proj-meta"></div>
+    </div>
+
+    <div class="setting-row">
+      <div class="label">默认单价（元/m²）</div>
+      <input type="number" inputmode="decimal" id="default-price" step="any" min="0">
+    </div>
+
+    <div class="btn-row" style="margin-bottom:12px">
+      <button class="btn secondary" data-action="copy-bill">⧉ 复制账单</button>
+      <button class="btn secondary" data-action="export-pdf">📄 导出PDF</button>
+    </div>
+
+    <div id="room-list"></div>
+    <button class="btn secondary" data-action="add-room">＋ 添加房间</button>
+    <button class="btn danger" data-action="delete-project" style="margin-top:16px">删除本工程</button>
+  </div>
+</div>
+
+<!-- PDF 导出源（离屏渲染） -->
+<div id="pdf-src"></div>
+
+<!-- 弹窗 -->
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 数据层 ============ */
+const STORE_KEY = 'cabinetAppData_v1';
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function defaultState() {
+  return { projects: [] };
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return defaultState();
+}
+
+let state = load();
+
+function save() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+}
+
+function getProject(id) {
+  return state.projects.find(p => p.id === id);
+}
+
+/* ============ 预选词 ============ */
+const ROOM_PRESETS = [
+  { group: '卧室', items: ['主卧', '次卧', '老人房', '客卧', '儿童房', '书房', '榻榻米房'] },
+  { group: '厨卫', items: ['厨房', '中西厨', '卫生间', '浴室', '洗衣房'] },
+  { group: '客厅餐厅', items: ['客厅', '餐厅', '电视柜', '沙发背景墙', '隔断', '吧台'] },
+  { group: '阳台入户', items: ['阳台', '生活阳台', '休闲阳台', '阳光房', '露台', '玄关', '门厅', '过道', '楼梯间'] },
+  { group: '功能', items: ['衣帽间', '储物间', '鞋柜区', '佛堂', '茶室', '影音室', '阁楼', '地下室'] }
+];
+
+const CABINET_PRESETS = [
+  { id: 'kitchen', group: '厨房', rooms: ['厨房', '中西厨'], items: ['地柜', '吊柜', '高柜', '中岛台', '吧台', '台面', '水槽柜', '灶台柜', '烟机柜', '转角柜', '拉篮柜', '调味柜', '电器柜'] },
+  { id: 'bedroom', group: '卧室', rooms: ['主卧', '次卧', '老人房', '客卧', '客房', '儿童房', '书房', '榻榻米房', '衣帽间'], items: ['衣柜', '顶柜', '飘窗柜', '床头柜', '梳妆台', '书桌', '书柜', '榻榻米', '斗柜'] },
+  { id: 'living', group: '客厅餐厅', rooms: ['客厅', '餐厅', '电视柜', '电视墙', '沙发背景墙', '隔断', '吧台', '玄关', '门厅', '鞋柜区'], items: ['电视柜', '背景墙柜', '收纳柜', '展示柜', '酒柜', '餐边柜', '玄关柜', '鞋柜', '隔断柜', '卡座'] },
+  { id: 'bath', group: '卫生间阳台', rooms: ['卫生间', '浴室', '洗衣房', '阳台', '生活阳台', '休闲阳台', '阳光房', '露台'], items: ['浴室柜', '镜柜', '洗衣机柜', '阳台柜', '拖把池柜', '家政柜'] }
+];
+
+// 根据房间名推荐对应的柜子分组；无法判断时返回全部分组
+function cabinetGroupsForRoom(roomName) {
+  const name = (roomName || '').trim();
+  if (!name) return CABINET_PRESETS;
+  const exact = CABINET_PRESETS.filter(g => g.rooms.indexOf(name) !== -1);
+  if (exact.length) return exact;
+  const rules = [
+    ['厨', 'kitchen'],
+    ['卫', 'bath'], ['浴', 'bath'], ['洗', 'bath'], ['阳', 'bath'], ['露台', 'bath'],
+    ['卧', 'bedroom'], ['衣帽', 'bedroom'], ['书房', 'bedroom'], ['儿童', 'bedroom'], ['榻榻', 'bedroom'],
+    ['客', 'living'], ['厅', 'living'], ['餐', 'living'], ['电视', 'living'], ['酒', 'living'], ['吧台', 'living'], ['隔断', 'living'], ['玄关', 'living'], ['鞋', 'living'], ['门厅', 'living']
+  ];
+  const ids = [];
+  rules.forEach(r => { if (name.indexOf(r[0]) !== -1 && ids.indexOf(r[1]) === -1) ids.push(r[1]); });
+  const groups = CABINET_PRESETS.filter(g => ids.indexOf(g.id) !== -1);
+  return groups.length ? groups : CABINET_PRESETS;
+}
+
+function presetChipsHTML(groups) {
+  return groups.map(g => `
+    <div class="preset-group">
+      <span class="preset-label">${esc(g.group)}</span>
+      <div class="chips">${g.items.map(it => `<button type="button" class="chip" data-action="preset-fill" data-target="f-name" data-value="${esc(it)}">${esc(it)}</button>`).join('')}</div>
+    </div>`).join('');
+}
+
+/* ============ 计算 ============ */
+function cabinetArea(c) {
+  const w = parseFloat(c.width) || 0;
+  const h = parseFloat(c.height) || 0;
+  return w * h;
+}
+function extrasTotal(c) {
+  return (c.extras || []).reduce((s, e) => s + (parseFloat(e.qty) || 0) * (parseFloat(e.price) || 0), 0);
+}
+function cabinetBaseAmount(c) {
+  const q = parseFloat(c.quantity) || 0;
+  const p = parseFloat(c.unitPrice) || 0;
+  return cabinetArea(c) * q * p;
+}
+function cabinetAmount(c) {
+  return cabinetBaseAmount(c) + extrasTotal(c);
+}
+function roomSubtotal(r) {
+  return (r.cabinets || []).reduce((s, c) => s + cabinetAmount(c), 0);
+}
+function roomArea(r) {
+  return (r.cabinets || []).reduce((s, c) => s + cabinetArea(c) * (parseFloat(c.quantity) || 0), 0);
+}
+function projectTotal(p) {
+  return (p.rooms || []).reduce((s, r) => s + roomSubtotal(r), 0);
+}
+function projectArea(p) {
+  return (p.rooms || []).reduce((s, r) => s + roomArea(r), 0);
+}
+function projectCabCount(p) {
+  return (p.rooms || []).reduce((s, r) => s + (r.cabinets || []).length, 0);
+}
+
+function fmt(n) {
+  n = Number(n) || 0;
+  return (Math.round(n * 100) / 100).toString();
+}
+
+/* ============ 弹窗 ============ */
+let modalCtx = null; // { type, projectId, roomId, cabinetId }
+
+function renderExtrasList() {
+  const list = document.getElementById('extras-list');
+  if (!list) return;
+  const ex = modalCtx.extras || [];
+  list.innerHTML = ex.length
+    ? ex.map((e, i) => `
+      <div class="extra-row">
+        <span class="extra-name">${esc(e.name)}</span>
+        <input id="extra-qty-${i}" type="number" inputmode="numeric" step="any" min="0" placeholder="数量" value="${e.qty}">
+        <input id="extra-price-${i}" type="number" inputmode="decimal" step="any" min="0" placeholder="单价" value="${e.price}">
+        <button type="button" class="icon-btn danger" data-action="del-extra" data-index="${i}">✕</button>
+      </div>`).join('')
+    : '<div class="extra-empty">暂无杂项，点下方标签快速添加</div>';
+}
+
+function collectExtras() {
+  const ex = modalCtx.extras || [];
+  ex.forEach((e, i) => {
+    const q = document.getElementById('extra-qty-' + i);
+    const p = document.getElementById('extra-price-' + i);
+    if (q) e.qty = parseFloat(q.value) || 0;
+    if (p) e.price = parseFloat(p.value) || 0;
+  });
+  return ex;
+}
+
+function openModal(type, ctx) {
+  modalCtx = Object.assign({ type: type }, ctx || {});
+  const sheet = document.getElementById('sheet');
+  let html = '';
+  if (type === 'project') {
+    const p = ctx && ctx.projectId ? getProject(ctx.projectId) : null;
+    html = `
+      <h2>${p ? '编辑工程' : '新建工程'}</h2>
+      <div class="field"><label>工程名称（如：张先生家）</label><input id="f-name" placeholder="请输入客户/工地名称" value="${p ? esc(p.name) : ''}"></div>
+      <div class="field unit"><label>默认单价</label><input id="f-price" type="number" inputmode="decimal" step="any" min="0" value="${p ? p.defaultPrice : 50}"><span>元/m²</span></div>
+      <div class="btn-row">
+        <button class="btn secondary" data-action="modal-cancel">取消</button>
+        <button class="btn" data-action="modal-save">保存</button>
+      </div>`;
+  } else if (type === 'room') {
+    const p = getProject(ctx.projectId);
+    const r = ctx.roomId ? (p.rooms || []).find(x => x.id === ctx.roomId) : null;
+    html = `
+      <h2>${r ? '编辑房间' : '添加房间'}</h2>
+      <div class="field"><label>房间名称（如：厨房 / 主卧 / 电视柜）</label><input id="f-name" placeholder="请输入房间名称" value="${r ? esc(r.name) : ''}"></div>
+      ${presetChipsHTML(ROOM_PRESETS)}
+      <div class="btn-row">
+        <button class="btn secondary" data-action="modal-cancel">取消</button>
+        <button class="btn" data-action="modal-save">保存</button>
+      </div>`;
+  } else if (type === 'cabinet') {
+    const p = getProject(ctx.projectId);
+    const r = (p.rooms || []).find(x => x.id === ctx.roomId);
+    const c = ctx.cabinetId ? (r.cabinets || []).find(x => x.id === ctx.cabinetId) : null;
+    modalCtx.extras = (c && c.extras ? c.extras : []).map(e => ({ name: e.name, qty: e.qty, price: e.price }));
+    html = `
+      <h2>${c ? '编辑柜子' : '添加柜子'}</h2>
+      <div class="field"><label>名称（如：地柜 / 吊柜 / 高柜）</label><input id="f-name" placeholder="请输入柜子名称" value="${c ? esc(c.name) : ''}"></div>
+      <div class="preset-hint">当前房间「${esc(r ? r.name : '')}」推荐的柜子：</div>
+      ${presetChipsHTML(cabinetGroupsForRoom(r ? r.name : ''))}
+
+      <div class="section-label">柜子尺寸</div>
+      <div class="grid2">
+        <div class="field unit"><label>宽</label><input id="f-width" type="number" inputmode="decimal" step="any" min="0" placeholder="0" value="${c ? c.width : ''}"><span>米</span></div>
+        <div class="field unit"><label>高</label><input id="f-height" type="number" inputmode="decimal" step="any" min="0" placeholder="0" value="${c ? c.height : ''}"><span>米</span></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>数量</label><input id="f-qty" type="number" inputmode="numeric" step="any" min="0" placeholder="1" value="${c ? c.quantity : 1}"></div>
+        <div class="field unit"><label>单价</label><input id="f-price" type="number" inputmode="decimal" step="any" min="0" value="${c ? c.unitPrice : p.defaultPrice}"><span>元/m²</span></div>
+      </div>
+
+      <div class="section-label">杂项（按件计价）</div>
+      <div id="extras-list"></div>
+      <div class="chips" style="margin-top:8px">
+        <button type="button" class="chip" data-action="add-extra" data-value="灯管">灯管 ¥10</button>
+        <button type="button" class="chip" data-action="add-extra" data-value="指纹锁">指纹锁</button>
+      </div>
+      <div class="extra-add" style="margin-top:8px">
+        <input id="extra-name-input" placeholder="其他杂项名称，如：反弹器">
+        <button type="button" class="btn secondary" data-action="add-extra-custom" style="width:auto;padding:10px 14px">添加</button>
+      </div>
+
+      <div class="section-label">备注</div>
+      <div class="field"><input id="f-note" placeholder="可选：含抽屉 / 玻璃门" value="${c ? esc(c.note || '') : ''}"></div>
+
+      <div class="btn-row">
+        <button class="btn secondary" data-action="modal-cancel">取消</button>
+        <button class="btn" data-action="modal-save">保存</button>
+      </div>`;
+  }
+  sheet.innerHTML = html;
+  document.getElementById('overlay').classList.add('show');
+  const first = sheet.querySelector('input');
+  if (first) first.focus();
+  if (type === 'cabinet') renderExtrasList();
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('show');
+  modalCtx = null;
+}
+
+function saveModal() {
+  const t = modalCtx.type;
+  const v = id => document.getElementById(id).value.trim();
+  if (t === 'project') {
+    const name = v('f-name');
+    const price = parseFloat(v('f-price')) || 0;
+    if (!name) return toast('请输入工程名称');
+    if (modalCtx.projectId) {
+      const p = getProject(modalCtx.projectId);
+      p.name = name; p.defaultPrice = price;
+    } else {
+      state.projects.push({ id: uid(), name: name, defaultPrice: price, createdAt: Date.now(), rooms: [] });
+    }
+  } else if (t === 'room') {
+    const name = v('f-name');
+    if (!name) return toast('请输入房间名称');
+    const p = getProject(modalCtx.projectId);
+    if (modalCtx.roomId) {
+      p.rooms.find(x => x.id === modalCtx.roomId).name = name;
+    } else {
+      p.rooms.push({ id: uid(), name: name, cabinets: [] });
+    }
+  } else if (t === 'cabinet') {
+    const name = v('f-name') || '未命名';
+    const width = parseFloat(v('f-width')) || 0;
+    const height = parseFloat(v('f-height')) || 0;
+    const quantity = parseFloat(v('f-qty')) || 1;
+    const price = parseFloat(v('f-price')) || 0;
+    const note = v('f-note');
+    const extras = collectExtras().filter(e => e.name);
+    const p = getProject(modalCtx.projectId);
+    const r = p.rooms.find(x => x.id === modalCtx.roomId);
+    const data = { name: name, width: width, height: height, quantity: quantity, unitPrice: price, note: note, extras: extras };
+    if (modalCtx.cabinetId) {
+      Object.assign(r.cabinets.find(x => x.id === modalCtx.cabinetId), data);
+    } else {
+      r.cabinets.push(Object.assign({ id: uid() }, data));
+    }
+  }
+  save();
+  closeModal();
+  render();
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+/* ============ 渲染 ============ */
+let currentProjectId = null;
+const expandedRooms = new Set();
+
+function render() {
+  renderHome();
+  renderProject();
+}
+
+function renderHome() {
+  const list = document.getElementById('home-list');
+  const empty = document.getElementById('home-empty');
+  if (!state.projects.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = state.projects.map(p => `
+    <div class="list-item" data-action="open-project" data-id="${p.id}">
+      <div class="info">
+        <div class="name">${esc(p.name)}</div>
+        <div class="sub">${p.rooms ? p.rooms.length : 0} 个房间 · ${fmt(projectArea(p))} m²</div>
+      </div>
+      <div class="amount">¥${fmt(projectTotal(p))}</div>
+    </div>`).join('');
+}
+
+function renderProject() {
+  if (!currentProjectId) return;
+  const p = getProject(currentProjectId);
+  if (!p) { currentProjectId = null; return; }
+  document.getElementById('proj-title').textContent = p.name;
+  document.getElementById('proj-total').textContent = '¥' + fmt(projectTotal(p));
+  document.getElementById('proj-meta').innerHTML =
+    `<span>面积 ${fmt(projectArea(p))} m²</span><span>${p.rooms ? p.rooms.length : 0} 个房间</span><span>${projectCabCount(p)} 个柜子</span>`;
+  document.getElementById('default-price').value = p.defaultPrice;
+
+  const list = document.getElementById('room-list');
+  if (!p.rooms || !p.rooms.length) {
+    list.innerHTML = `<div class="empty" style="padding:32px 16px"><p>还没有房间，先添加「厨房」或「卧室」吧</p></div>`;
+    return;
+  }
+  list.innerHTML = p.rooms.map(r => {
+    const open = expandedRooms.has(r.id) ? 'open' : '';
+    const cabs = (r.cabinets || []).map(c => `
+      <div class="cab">
+        <div class="info">
+          <div class="cname">${esc(c.name)}</div>
+          <div class="dims">${fmt(c.width)}m × ${fmt(c.height)}m × ${fmt(c.quantity)}${c.note ? ' · ' + esc(c.note) : ''}${extrasTotal(c) > 0 ? ' · 杂项 ¥' + fmt(extrasTotal(c)) : ''}</div>
+        </div>
+        <div class="money">
+          <div class="amt">¥${fmt(cabinetAmount(c))}</div>
+          <div class="area">${fmt(cabinetArea(c) * (parseFloat(c.quantity) || 0))} m²</div>
+        </div>
+        <button class="icon-btn" data-action="edit-cabinet" data-id="${c.id}" data-room="${r.id}">✎</button>
+        <button class="icon-btn danger" data-action="delete-cabinet" data-id="${c.id}" data-room="${r.id}">🗑</button>
+      </div>`).join('');
+    return `
+      <div class="card room ${open}">
+        <div class="room-head" data-action="toggle-room" data-id="${r.id}">
+          <span class="chev">▶</span>
+          <span class="name">${esc(r.name)}</span>
+          <span class="subtotal">¥${fmt(roomSubtotal(r))}</span>
+          <button class="icon-btn" data-action="edit-room" data-id="${r.id}">✎</button>
+          <button class="icon-btn danger" data-action="delete-room" data-id="${r.id}">🗑</button>
+        </div>
+        <div class="room-body">
+          <div class="cab-list">${cabs}</div>
+          <button class="btn secondary" data-action="add-cabinet" data-id="${r.id}" style="margin-top:10px">＋ 添加柜子</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ============ 账单导出 ============ */
+function buildBill(p) {
+  const lines = [];
+  lines.push('【' + p.name + ' · 橱柜对账单】');
+  lines.push('------------------------------');
+  (p.rooms || []).forEach(r => {
+    lines.push('▍' + r.name + '（小计 ¥' + fmt(roomSubtotal(r)) + '）');
+    (r.cabinets || []).forEach(c => {
+      const area = cabinetArea(c) * (parseFloat(c.quantity) || 0);
+      let s = '  ' + c.name + '：' + fmt(c.width) + '×' + fmt(c.height) + 'm ×' + fmt(c.quantity);
+      s += ' = ' + fmt(area) + 'm² ×¥' + fmt(c.unitPrice) + ' = ¥' + fmt(cabinetBaseAmount(c));
+      if (c.note) s += '（' + c.note + '）';
+      lines.push(s);
+      (c.extras || []).forEach(e => {
+        lines.push('    · ' + e.name + ' ×' + fmt(e.qty) + ' ×¥' + fmt(e.price) + ' = ¥' + fmt((parseFloat(e.qty) || 0) * (parseFloat(e.price) || 0)));
+      });
+    });
+  });
+  lines.push('------------------------------');
+  lines.push('总面积：' + fmt(projectArea(p)) + ' m²');
+  lines.push('总金额：¥' + fmt(projectTotal(p)));
+  return lines.join('\n');
+}
+
+function billDate() {
+  const d = new Date();
+  const pad = n => (n < 10 ? '0' + n : '' + n);
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+
+function buildPrintHTML(p) {
+  let rows = '';
+  (p.rooms || []).forEach(r => {
+    rows += `<tr class="room-row"><td colspan="6">${esc(r.name)}</td></tr>`;
+    (r.cabinets || []).forEach(c => {
+      rows += `<tr>
+        <td>${esc(c.name)}${c.note ? '（' + esc(c.note) + '）' : ''}</td>
+        <td>${fmt(c.width)}×${fmt(c.height)}</td>
+        <td>${fmt(c.quantity)}</td>
+        <td>${fmt(cabinetArea(c) * (parseFloat(c.quantity) || 0))}</td>
+        <td>${fmt(c.unitPrice)}</td>
+        <td>${fmt(cabinetBaseAmount(c))}</td>
+      </tr>`;
+      (c.extras || []).forEach(e => {
+        rows += `<tr>
+          <td style="padding-left:18px">${esc(e.name)}</td>
+          <td></td>
+          <td>${fmt(e.qty)}</td>
+          <td></td>
+          <td>${fmt(e.price)}</td>
+          <td>${fmt((parseFloat(e.qty) || 0) * (parseFloat(e.price) || 0))}</td>
+        </tr>`;
+      });
+    });
+  });
+  return `
+    <h1>橱柜对账单</h1>
+    <div class="print-meta">工程：${esc(p.name)}　·　日期：${billDate()}</div>
+    <table>
+      <thead>
+        <tr><th>名称</th><th>宽×高(m)</th><th>数量</th><th>面积(m²)</th><th>单价(元)</th><th>金额(元)</th></tr>
+      </thead>
+      <tbody>
+        ${rows}
+        <tr class="total-row">
+          <td colspan="3">合计</td>
+          <td>${fmt(projectArea(p))}</td>
+          <td></td>
+          <td>${fmt(projectTotal(p))}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="print-footer">总金额：¥${fmt(projectTotal(p))}</div>`;
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector('script[src="' + src + '"]')) return resolve();
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('加载失败'));
+    document.head.appendChild(s);
+  });
+}
+
+async function exportPdf(p) {
+  try {
+    await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+  } catch (e) {
+    toast('PDF 组件加载失败，请检查网络后重试');
+    return;
+  }
+  const jsPDF = window.jspdf && window.jspdf.jsPDF;
+  const html2canvas = window.html2canvas;
+  if (!jsPDF || !html2canvas) {
+    toast('PDF 组件加载失败，请检查网络后重试');
+    return;
+  }
+  toast('正在生成 PDF…');
+  const src = document.getElementById('pdf-src');
+  src.innerHTML = buildPrintHTML(p);
+  const canvas = await html2canvas(src, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const margin = 10;
+  const usableW = 210 - margin * 2;
+  const usableH = 297 - margin * 2;
+  const imgH = canvas.height * usableW / canvas.width;
+  let heightLeft = imgH;
+  let k = 0;
+  pdf.addImage(imgData, 'PNG', margin, margin, usableW, imgH);
+  heightLeft -= usableH;
+  while (heightLeft > 0) {
+    k++;
+    pdf.addPage();
+    pdf.addImage(imgData, 'PNG', margin, margin - k * usableH, usableW, imgH);
+    heightLeft -= usableH;
+  }
+  pdf.save('橱柜对账单-' + p.name + '.pdf');
+  toast('PDF 已生成');
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      return true;
+    } catch (e2) { return false; }
+  }
+}
+
+/* ============ 交互 ============ */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.getAttribute('data-action');
+  const id = el.getAttribute('data-id');
+
+  switch (action) {
+    case 'new-project': openModal('project', {}); break;
+    case 'open-project': currentProjectId = id; expandedRooms.clear(); showPage('page-project'); renderProject(); break;
+    case 'back-home': currentProjectId = null; showPage('page-home'); break;
+    case 'edit-project': openModal('project', { projectId: currentProjectId }); break;
+    case 'delete-project': {
+      const p = getProject(currentProjectId);
+      if (confirm('确定删除工程「' + p.name + '」？此操作不可恢复。')) {
+        state.projects = state.projects.filter(x => x.id !== currentProjectId);
+        save(); currentProjectId = null; showPage('page-home'); renderHome();
+      }
+      break;
+    }
+    case 'add-room': openModal('room', { projectId: currentProjectId }); break;
+    case 'edit-room': openModal('room', { projectId: currentProjectId, roomId: id }); break;
+    case 'delete-room': {
+      const p = getProject(currentProjectId);
+      const r = p.rooms.find(x => x.id === id);
+      if (confirm('确定删除房间「' + r.name + '」及其所有柜子？')) {
+        p.rooms = p.rooms.filter(x => x.id !== id);
+        expandedRooms.delete(id); save(); renderProject();
+      }
+      break;
+    }
+    case 'toggle-room': {
+      const room = el.closest('.room-head');
+      const roomId = id;
+      if (expandedRooms.has(roomId)) expandedRooms.delete(roomId); else expandedRooms.add(roomId);
+      const card = el.closest('.room');
+      card.classList.toggle('open', expandedRooms.has(roomId));
+      break;
+    }
+    case 'add-cabinet': openModal('cabinet', { projectId: currentProjectId, roomId: id }); break;
+    case 'edit-cabinet': openModal('cabinet', { projectId: currentProjectId, roomId: el.getAttribute('data-room'), cabinetId: id }); break;
+    case 'delete-cabinet': {
+      const p = getProject(currentProjectId);
+      const r = p.rooms.find(x => x.id === el.getAttribute('data-room'));
+      const c = r.cabinets.find(x => x.id === id);
+      if (confirm('确定删除柜子「' + c.name + '」？')) {
+        r.cabinets = r.cabinets.filter(x => x.id !== id);
+        save(); renderProject();
+      }
+      break;
+    }
+    case 'copy-bill': {
+      const p = getProject(currentProjectId);
+      const ok = await copyText(buildBill(p));
+      toast(ok ? '账单已复制，可粘贴发送' : '复制失败，请手动截图');
+      break;
+    }
+    case 'export-pdf': {
+      const p = getProject(currentProjectId);
+      exportPdf(p);
+      break;
+    }
+    case 'clear-data': {
+      if (confirm('确定清空全部数据？所有工程和柜子都会被删除。')) {
+        state = defaultState(); save(); expandedRooms.clear(); render();
+      }
+      break;
+    }
+    case 'modal-cancel': closeModal(); break;
+    case 'modal-save': saveModal(); break;
+    case 'preset-fill': {
+      const input = document.getElementById(el.getAttribute('data-target'));
+      if (input) { input.value = el.getAttribute('data-value'); input.focus(); }
+      break;
+    }
+    case 'add-extra': {
+      collectExtras();
+      const nm = el.getAttribute('data-value');
+      modalCtx.extras.push({ name: nm, qty: 1, price: nm === '灯管' ? 10 : 0 });
+      renderExtrasList();
+      break;
+    }
+    case 'add-extra-custom': {
+      const inp = document.getElementById('extra-name-input');
+      const nm = (inp && inp.value ? inp.value : '').trim();
+      if (!nm) { toast('请输入杂项名称'); break; }
+      collectExtras();
+      modalCtx.extras.push({ name: nm, qty: 1, price: 0 });
+      if (inp) inp.value = '';
+      renderExtrasList();
+      break;
+    }
+    case 'del-extra': {
+      collectExtras();
+      const idx = parseInt(el.getAttribute('data-index'), 10);
+      if (!isNaN(idx)) modalCtx.extras.splice(idx, 1);
+      renderExtrasList();
+      break;
+    }
+  }
+});
+
+/* 默认单价实时更新 */
+document.getElementById('default-price').addEventListener('change', e => {
+  const p = getProject(currentProjectId);
+  if (!p) return;
+  p.defaultPrice = parseFloat(e.target.value) || 0;
+  save();
+  toast('默认单价已更新为 ' + p.defaultPrice + ' 元/m²');
+});
+
+/* 初始化 */
+showPage('page-home');
+render();
+
+/* 注册 Service Worker（实现离线 + 可安装为 App） */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
