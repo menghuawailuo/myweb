@@ -1,8 +1,12 @@
-/* 橱柜对账 Service Worker */
-const CACHE = 'cabinet-v1';
+/* 橱柜对账 Service Worker
+ * 注意：修改 index.html / css / js 后，请升级 CACHE 版本号（如 cabinet-v3），
+ * 否则已安装用户不会刷新缓存（同源资源虽为网络优先，但离线时会用到旧缓存）。 */
+const CACHE = 'cabinet-v2';
 const CORE = [
   './',
   './index.html',
+  './css/style.css',
+  './js/app.js',
   './manifest.json',
   './icons/icon-180.png',
   './icons/icon-192.png',
@@ -11,13 +15,14 @@ const CORE = [
 // 按需加载的 PDF 库，也缓存下来，断网时导出 PDF 仍可用
 const CDN = [
   'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
-  'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
+  'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
 ];
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(CORE))
+      .then(c => Promise.all(CORE.map(u => c.add(u).catch(() => null))))
       .then(() => self.skipWaiting())
   );
 });
