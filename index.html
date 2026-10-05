@@ -23,6 +23,29 @@
       <button class="btn-icon" data-action="new-project" title="新建工程">＋</button>
     </div>
     <div class="page-body">
+      <!-- 存储故障：数据写不进去，必须让用户立刻知道 -->
+      <div class="notice notice-danger" id="storage-notice" hidden>
+        <div class="notice-txt">⚠️ <b>数据无法保存</b>：浏览器存储空间可能已满。请立即导出备份，否则新录入的内容会丢失。</div>
+        <div class="notice-actions">
+          <button class="btn small secondary" data-action="backup-now">立即备份</button>
+        </div>
+      </div>
+      <!-- 上次读取数据失败，原始内容已另存 -->
+      <div class="notice notice-danger" id="rescue-notice" hidden>
+        <div class="notice-txt">⚠️ <b>本地数据读取失败</b>，当前显示的是空账本。原始数据已留了一份副本，请先下载保存，再决定是否重新录入。</div>
+        <div class="notice-actions">
+          <button class="btn small secondary" data-action="download-rescue">下载原始数据</button>
+        </div>
+      </div>
+      <!-- 备份提醒 -->
+      <div class="notice" id="backup-notice" hidden>
+        <div class="notice-txt" id="backup-notice-txt"></div>
+        <div class="notice-actions">
+          <button class="btn small secondary" data-action="backup-now">立即备份</button>
+          <button class="btn small ghost" data-action="backup-snooze">稍后</button>
+        </div>
+      </div>
+
       <div id="home-list"></div>
       <div class="empty" id="home-empty" style="display:none">
         <div class="big">🧮</div>
@@ -38,53 +61,62 @@
       <button class="btn-icon" data-action="back-home">‹</button>
       <h1 id="proj-title">工程</h1>
       <button class="btn-icon" data-action="edit-project" title="编辑">✎</button>
+      <button class="btn-icon" data-action="more-menu" title="更多">⋯</button>
     </div>
     <div class="page-body">
-      <div id="proj-info"></div>
       <div class="summary">
         <div class="label">应收金额</div>
         <div class="total" id="proj-total">¥0</div>
         <div class="meta" id="proj-meta"></div>
-        <div id="proj-breakdown"></div>
+        <div class="breakdown" id="proj-breakdown"></div>
       </div>
 
-      <div class="setting-row">
-        <div class="label">默认单价（元/m²）</div>
-        <input type="number" inputmode="decimal" id="default-price" step="any" min="0">
-      </div>
-
-      <div class="card card-body" style="padding:12px 16px;margin-bottom:12px">
-        <div class="info-title">折扣</div>
-        <div class="chips" id="discount-type-chips">
-          <button type="button" class="chip" data-action="set-discount" data-value="none">无折扣</button>
-          <button type="button" class="chip" data-action="set-discount" data-value="rate">按折扣率</button>
-          <button type="button" class="chip" data-action="set-discount" data-value="amount">按优惠金额</button>
+      <!-- 工程信息与收款：默认收起，免得录入柜子时先滑过一堆设置。
+           必须用 hidden 隐藏而不是不渲染 —— 里面的输入框上绑着实时监听器，
+           renderProject 每次也会去写它们的 value，元素不在 DOM 里就会出错。 -->
+      <div class="card" id="proj-settings">
+        <div class="card-head" data-action="toggle-project-settings">
+          <span class="chev">▶</span>
+          <span class="card-head-title">工程信息与收款</span>
+          <span class="card-head-sub" id="proj-settings-sub"></span>
         </div>
-        <div id="discount-input" style="margin-top:10px"></div>
-      </div>
+        <div class="card-body" id="proj-settings-body" hidden>
+          <div id="proj-info"></div>
 
-      <div class="setting-row">
-        <div class="label">已收金额（元）</div>
-        <input type="number" inputmode="decimal" id="paid-amount" step="any" min="0">
-      </div>
+          <div class="setting-row nested">
+            <div class="label">默认单价（元/m²）</div>
+            <input type="number" inputmode="decimal" id="default-price" step="any" min="0">
+          </div>
 
-      <div class="setting-row">
-        <div class="label">已结清</div>
-        <label class="switch">
-          <input type="checkbox" id="settled-check">
-          <span class="slider"></span>
-        </label>
-      </div>
+          <div class="divider"></div>
+          <div class="info-title">折扣</div>
+          <div class="chips" id="discount-type-chips">
+            <button type="button" class="chip" data-action="set-discount" data-value="none">无折扣</button>
+            <button type="button" class="chip" data-action="set-discount" data-value="rate">按折扣率</button>
+            <button type="button" class="chip" data-action="set-discount" data-value="amount">按优惠金额</button>
+          </div>
+          <div id="discount-input" style="margin-top:10px"></div>
 
-      <div class="btn-row" style="margin-bottom:12px">
-        <button class="btn secondary" data-action="copy-bill" style="font-size:14px">⧉ 复制账单</button>
-        <button class="btn secondary" data-action="export-pdf" style="font-size:14px">📄 导出PDF</button>
-        <button class="btn secondary" data-action="export-excel" style="font-size:14px">📊 导出Excel</button>
+          <div class="divider"></div>
+          <div class="setting-row nested">
+            <div class="label">已收金额（元）</div>
+            <input type="number" inputmode="decimal" id="paid-amount" step="any" min="0">
+          </div>
+
+          <div class="setting-row nested">
+            <div class="label">已结清<span class="label-hint">打开会把「已收」回填为应收金额</span></div>
+            <label class="switch">
+              <input type="checkbox" id="settled-check">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div id="room-list"></div>
-      <button class="btn secondary" data-action="add-room">＋ 添加房间</button>
-      <button class="btn danger" data-action="delete-project" style="margin-top:16px">删除本工程</button>
+      <!-- 两个按钮由 renderProject 按录入方式决定显示哪个（直列模式没有房间层级） -->
+      <button class="btn secondary" id="add-cabinet-btn" data-action="add-cabinet" hidden>＋ 添加柜子</button>
+      <button class="btn secondary" id="add-room-btn" data-action="add-room">＋ 添加房间</button>
     </div>
   </div>
 
@@ -92,7 +124,7 @@
   <div class="page" id="page-category">
     <div class="topbar"><h1>分类</h1></div>
     <div class="page-body">
-      <div class="card"><div class="card-body">
+      <div class="card" id="category-rooms-card"><div class="card-body">
         <h3>房间分类</h3>
         <div id="category-rooms"></div>
       </div></div>
@@ -106,12 +138,7 @@
   <!-- 统计 -->
   <div class="page" id="page-stats">
     <div class="topbar"><h1>统计</h1></div>
-    <div class="page-body">
-      <div class="empty" style="padding:80px 20px">
-        <div class="big">📊</div>
-        <p>统计图表即将上线<br>（工程金额排行 · 房间占比 · 月度趋势）</p>
-      </div>
-    </div>
+    <div class="page-body" id="stats-body"></div>
   </div>
 
   <!-- 我的 -->
@@ -126,14 +153,28 @@
         <div class="info-title">主题色</div>
         <div class="chips" id="theme-chips" style="gap:12px"></div>
       </div>
+
+      <div class="card card-body" id="backup-info">
+        <div class="info-title">备份</div>
+        <div class="info-row"><span class="info-k">上次备份</span><span class="info-v" id="last-backup-text">还没有备份过</span></div>
+        <div class="info-row"><span class="info-k">数据量</span><span class="info-v" id="data-size-text">—</span></div>
+      </div>
+
       <div class="card" style="padding:0">
         <button class="btn ghost" data-action="export-data" style="text-align:left">⬇ 备份数据（下载文件）</button>
         <button class="btn ghost" data-action="import-data" style="text-align:left">⬆ 导入备份</button>
         <input type="file" id="import-file" accept="application/json,.json" style="display:none">
       </div>
+
+      <div class="card card-body" id="snapshot-card" hidden>
+        <div class="info-title">后悔药</div>
+        <div class="info-row"><span class="info-k">时间</span><span class="info-v" id="snapshot-text">—</span></div>
+        <button class="btn secondary" data-action="restore-snapshot" style="margin-top:10px">↩ 恢复到该时间点</button>
+      </div>
+
       <button class="btn danger" data-action="clear-data" style="margin-top:12px">清空全部数据</button>
       <div class="empty" style="padding:24px 0">
-        <p>橱柜对账 · 装修快速对账工具<br>数据仅保存在本机浏览器</p>
+        <p>橱柜对账 · 装修快速对账工具<br>数据仅保存在本机浏览器，请定期备份</p>
       </div>
     </div>
   </div>
@@ -148,7 +189,7 @@
   </div>
 </div>
 
-<!-- PDF 导出源（离屏渲染） -->
+<!-- PDF 导出源（离屏渲染；打印时由 body.printing 临时显示） -->
 <div id="pdf-src"></div>
 
 <!-- 弹窗 -->
@@ -158,6 +199,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="js/calc.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
