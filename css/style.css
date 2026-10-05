@@ -61,6 +61,23 @@
   .card-body { padding: 14px 16px; }
   .card-divider { border-top: 1px solid var(--border); }
 
+  /* 可点开的卡片头（工程信息与收款）：整行都是热区，箭头跟着展开状态转 */
+  .card-head {
+    display: flex; align-items: center; gap: 8px; padding: 14px 16px; cursor: pointer;
+  }
+  .card-head:active { background: #f9fafb; }
+  .card-head .chev { color: var(--text-2); font-size: 12px; transition: transform .2s; flex-shrink: 0; }
+  .card-head.open .chev { transform: rotate(90deg); }
+  .card-head-title { font-weight: 600; font-size: 15px; flex-shrink: 0; }
+  /* 收起时的摘要（设计师 · 95折 · 未收 ¥1234），省得为了看一眼数字还得展开 */
+  .card-head-sub {
+    flex: 1; min-width: 0; text-align: right; font-size: 12px; color: var(--text-2);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* 卡片内部的分组分隔线 */
+  .divider { border-top: 1px solid var(--border); margin: 12px 0; }
+
   /* 列表项 */
   .list-item {
     display: flex; align-items: center; gap: 12px;
@@ -134,6 +151,11 @@
     width: 90px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px;
     font-size: 16px; text-align: right;
   }
+  /* 收进卡片里的设置行：把自己那层卡片外壳去掉，不然卡片套卡片 */
+  .setting-row.nested {
+    background: transparent; box-shadow: none; border-radius: 0;
+    padding: 8px 0; margin-bottom: 0;
+  }
   .info-title { font-size: 12px; color: var(--text-2); font-weight: 700; margin-bottom: 8px; }
   .info-row { display: flex; gap: 10px; font-size: 14px; margin-bottom: 4px; }
   .info-row:last-child { margin-bottom: 0; }
@@ -182,6 +204,18 @@
   }
   @keyframes up { from { transform: translateY(40px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
   .sheet h2 { margin: 0 0 16px; font-size: 18px; }
+
+  /* 顶栏「⋯」拉出来的菜单：一列整行按钮，导出和删除之间用一道线隔开 */
+  .menu { margin: -4px 0; }
+  .menu-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 15px 4px; border: none; background: transparent; cursor: pointer;
+    font-size: 16px; color: var(--text); font-family: inherit;
+  }
+  .menu-item:active { background: #f9fafb; }
+  .menu-item .menu-icon { font-size: 17px; width: 22px; text-align: center; flex-shrink: 0; }
+  .menu-item.danger { color: var(--danger); }
+  .menu-divider { border-top: 1px solid var(--border); margin: 6px 0; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 14px; color: var(--text-2); margin-bottom: 6px; }
   .field input {
@@ -196,7 +230,6 @@
   .grid2 .field { flex: 1; }
 
   /* 预选词标签 */
-  .presets { max-height: 32vh; overflow-y: auto; margin-bottom: 4px; }
   .preset-group { margin-bottom: 10px; }
   .preset-label { display: block; font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -211,15 +244,24 @@
   .chip-add { border-style: dashed; color: var(--primary); background: #fff; }
   .chip-on { background: var(--primary); border-color: var(--primary); color: #fff; }
   .preset-hint { font-size: 13px; color: var(--text-2); margin: 0 0 8px; }
-  .extra-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-  .extra-row .extra-name { flex: 1; font-weight: 500; font-size: 14px; }
-  .extra-row input {
-    width: 64px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; text-align: center;
+  /* 杂项：与柜子同级，所以和柜子行一样是列表里的一行，只是一行放不下，
+     窄屏上自动折成两行 —— 上行名称，下行数量/单位/单价 + 金额。 */
+  .extras { margin-top: 2px; }
+  .extras-head { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-2); padding-top: 8px; }
+  .extra-row {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    padding: 10px 0; border-top: 1px solid var(--border);
   }
-  .extra-row input.unit-in { width: 48px; }
-  .extra-add { display: flex; gap: 8px; }
-  .extra-add input { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; }
-  .extra-empty { font-size: 13px; color: var(--text-2); padding: 4px 0; }
+  .extra-row .extra-name-wrap { flex: 1 1 100%; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .extra-row input {
+    width: 62px; padding: 8px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; text-align: center;
+  }
+  .extra-row input.extra-name-in { flex: 1; width: auto; min-width: 0; text-align: left; font-weight: 500; }
+  .extra-row input.unit-in { width: 46px; }
+  .extra-row .extra-amt { margin-left: auto; font-weight: 700; color: var(--money); white-space: nowrap; }
+  .extra-row .icon-btn { padding: 4px 6px; }
+  .extras-total { font-size: 13px; color: var(--text-2); text-align: right; padding-top: 8px; }
   .section-label { font-size: 12px; font-weight: 700; color: var(--text-2); margin: 18px 0 10px; padding-top: 14px; border-top: 1px solid var(--border); }
 
   .toast {
@@ -268,5 +310,142 @@
   #pdf-src th, #pdf-src td { border: 1px solid #000; padding: 6px 8px; text-align: center; vertical-align: middle; }
   #pdf-src th { background: #ececec; font-weight: 700; }
   #pdf-src tr.room-row td { background: #dcf2ee; font-weight: 700; }
+  /* 杂项行：与柜子同级，但用浅灰底跟柜子区分，客户扫一眼就知道哪几行不是柜子 */
+  #pdf-src tr.extra-tr td { background: #fafafa; }
   #pdf-src tr.total-row td { background: #f2f2f2; font-weight: 700; }
-  #pdf-src .print-footer { margin-top: 12px; text-align: center; font-size: 12pt; font-weight: 700; }
+  /* 单价的计价基准（元/m²、元/个…）：紧跟在数字后面，比数字小一号淡一点，
+     一眼能看出这钱是按什么算的，又不至于把数字本身淹掉 */
+  #pdf-src td .unit { margin-left: 2px; font-size: 8pt; color: #555; }
+  /* 最后一行「应收金额」：整张单子就落在这一个数上，给它比合计再重一档的字号 */
+  #pdf-src tr.final-row td { font-weight: 700; font-size: 12pt; }
+
+  /* ==================== 提示条（存储故障 / 数据抢救 / 备份提醒） ==================== */
+  /* hidden 属性必须压过下面这些 display 规则，否则隐藏的提示条会一直露着 */
+  [hidden] { display: none !important; }
+
+  .notice {
+    background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b;
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px;
+    font-size: 14px; line-height: 1.55;
+  }
+  .notice-danger { background: #fef2f2; border-color: #fecaca; border-left-color: #dc2626; }
+  .notice-txt { color: #7c2d12; }
+  .notice-danger .notice-txt { color: #7f1d1d; }
+  .notice-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+  .btn.small { width: auto; padding: 8px 14px; font-size: 13px; border-radius: 9px; font-weight: 600; }
+  .btn.secondary.small { background: #fff; border: 1px solid var(--border); color: var(--text); }
+  .btn.ghost.small { border: 1px solid transparent; }
+
+  /* 直列模式的柜子列表：一排柜子装在一张卡片里（房间模式下由 .room-body 负责留白） */
+  .flat-card { padding: 4px 16px 14px; }
+
+  /* 柜子行上的房间标签（直列模式下标出这个柜子原来属于哪个房间） */
+  .tag {
+    display: inline-block; font-size: 11px; line-height: 1.6;
+    color: var(--text-2); background: #f3f4f6; border-radius: 6px;
+    padding: 0 6px; margin-right: 6px; vertical-align: 1px;
+  }
+
+  /* 设置行里的补充说明 */
+  .label-hint { display: block; font-size: 12px; font-weight: 400; color: var(--text-2); margin-top: 2px; }
+
+  /* 折扣输入超出范围时的视觉警告（不静默改写用户的输入） */
+  .input-warn { border-color: var(--danger) !important; background: #fef2f2 !important; }
+
+  /* 我的页：卡片里的整行按钮 */
+  .card > .btn.ghost { justify-content: flex-start; border-radius: 0; }
+  .card > .btn.ghost + .btn.ghost { border-top: 1px solid var(--border); }
+  .card > .btn.ghost:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+  .card > .btn.ghost:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+
+  /* ==================== 统计页（年报感） ==================== */
+  /* 英雄卡顶部的小标题：一句话把这张卡定性成"故事"而不是报表 */
+  .hero-kicker { font-size: 12px; letter-spacing: 1px; opacity: .9; margin-bottom: 8px; }
+  /* 收款状态后面那句俏皮话 */
+  .hero-cheer {
+    margin-top: 12px; padding-top: 10px; font-size: 13px; line-height: 1.5;
+    border-top: 1px solid rgba(255,255,255,.25); opacity: .95;
+  }
+
+  /* 成就牌：两列网格，每块一个 emoji + 数字 + 俏皮话 */
+  .achieve-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;
+  }
+  .achieve-tile {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 14px 16px;
+  }
+  .ach-emoji { font-size: 20px; line-height: 1.2; }
+  .ach-value { font-size: 24px; font-weight: 700; line-height: 1.25; margin-top: 2px; }
+  .ach-value .ach-unit { font-size: 13px; font-weight: 500; color: var(--text-2); margin-left: 3px; }
+  .ach-cap { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+  /* 高光时刻：一行一条，emoji 对齐，数字加粗挑出来 */
+  .super-list { display: flex; flex-direction: column; gap: 10px; }
+  .super-row { display: flex; gap: 10px; font-size: 14px; line-height: 1.55; align-items: flex-start; }
+  .super-row .super-ico { flex-shrink: 0; font-size: 16px; }
+  .super-row b { color: var(--money); font-weight: 700; }
+
+  /* 页脚那句话：整页看完给个收束 */
+  .annual-foot {
+    text-align: center; font-size: 13px; color: var(--text-2);
+    padding: 8px 0 4px; line-height: 1.6;
+  }
+
+  .stat-row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .stat-tile {
+    flex: 1; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 14px 16px;
+  }
+  .stat-label { font-size: 13px; color: var(--text-2); margin-bottom: 4px; }
+  /* 大数字用比例数字，tabular 会让 "121" 这种看起来松垮 */
+  .stat-value { font-size: 26px; font-weight: 700; line-height: 1.2; }
+  .stat-value .stat-unit { font-size: 13px; font-weight: 500; color: var(--text-2); margin-left: 3px; }
+  .stat-value.is-due { color: #b91c1c; }
+
+  .chart-note { font-size: 12px; color: var(--text-2); margin: -6px 0 12px; line-height: 1.5; }
+  .rank-more { font-size: 12px; color: var(--text-2); margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+
+  /* 横向排行：细条 + 数据端圆角 + 同色系浅色轨道 */
+  .rank-list { display: flex; flex-direction: column; gap: 10px; }
+  .rank-row { display: grid; grid-template-columns: 5.5em 1fr auto; align-items: center; gap: 10px; }
+  .rank-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank-meter { height: 10px; background: var(--primary-light); border-radius: 0 5px 5px 0; overflow: hidden; }
+  .rank-fill { height: 100%; background: var(--primary); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .rank-value { font-size: 13px; font-weight: 600; color: var(--money); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .rank-pct { display: inline-block; min-width: 3.2em; margin-left: 6px; text-align: right; font-weight: 400; color: var(--text-2); }
+
+  /* 月度趋势：柱顶圆角（数据端），底部贴基线 */
+  .trend { display: flex; align-items: flex-end; gap: 6px; height: 150px; margin-bottom: 6px; }
+  .trend-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 0; }
+  .trend-amt { font-size: 11px; color: var(--text-2); white-space: nowrap; height: 15px; line-height: 15px; }
+  .trend-track { width: 100%; flex: 1; display: flex; align-items: flex-end; }
+  .trend-fill { width: 100%; max-width: 24px; margin: 0 auto; background: var(--primary); border-radius: 4px 4px 0 0; min-height: 2px; }
+  .trend-label { font-size: 11px; color: var(--text-2); margin-top: 6px; white-space: nowrap; }
+
+  .table-toggle { margin-top: 12px; font-size: 13px; }
+  .table-toggle summary { cursor: pointer; color: var(--primary-dark); padding: 4px 0; }
+  .mini-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .mini-table td { padding: 6px 4px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .mini-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ==================== 打印 / 存为 PDF ==================== */
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    body { background: #fff; }
+    /* 打印时只留账单正文，界面外壳全部隐藏 */
+    .app, .tabbar, .overlay, .toast { display: none !important; }
+    #pdf-src { display: none; }
+    body.printing #pdf-src {
+      display: block;
+      position: static; left: auto; top: auto;
+      width: auto; padding: 0; background: #fff;
+    }
+    #pdf-src th, #pdf-src tr.room-row td, #pdf-src tr.extra-tr td, #pdf-src tr.total-row td {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    /* 表格跨页时重复表头，长账单更容易读 */
+    #pdf-src thead { display: table-header-group; }
+    #pdf-src tr { break-inside: avoid; page-break-inside: avoid; }
+  }
